@@ -106,29 +106,6 @@
             cursor: not-allowed;
         }
 
-        .result {
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #e8f5e9;
-            border-radius: 4px;
-            text-align: center;
-        }
-
-        .selected-label {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(255, 255, 255, 0.9);
-            padding: 5px 10px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-            font-weight: bold;
-            pointer-events: none;
-            min-width: 100px;
-            text-align: center;
-        }
-
         @media (max-width: 768px) {
             .container {
                 grid-template-columns: 1fr;
@@ -138,14 +115,13 @@
 </head>
 <body>
     <div class="container">
-        <div class="wheel-container">
+        <div class="wheel-container" id="wheel1">
             <div class="wheel-title">
                 <input type="text" placeholder="輸入轉盤標題" class="title-input">
             </div>
             <div class="wheel-section">
                 <div class="canvas-container">
                     <canvas width="300" height="300"></canvas>
-                    <div class="selected-label"></div>
                 </div>
                 <div class="options-container">
                     <textarea class="options-list" placeholder="每行輸入一個選項"></textarea>
@@ -153,7 +129,6 @@
                         <button class="start-btn">開始</button>
                         <button class="reset-btn">重置</button>
                     </div>
-                    <div class="result"></div>
                 </div>
             </div>
         </div>
@@ -161,154 +136,142 @@
 
     <script>
         class WheelOfFortune {
-            constructor(container) {
-                this.container = container;
-                this.canvas = container.querySelector('canvas');
-                this.ctx = this.canvas.getContext('2d');
-                this.options = [];
+    constructor(container) {
+        this.container = container;
+        this.canvas = container.querySelector('canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.options = [];
+        this.isSpinning = false;
+        this.currentRotation = 0;
+        this.targetRotation = 0;
+        this.spinDuration = 5000; // 動畫持續 5 秒
+
+        this.titleInput = container.querySelector('.title-input');
+        this.optionsTextarea = container.querySelector('.options-list');
+        this.startButton = container.querySelector('.start-btn');
+        this.resetButton = container.querySelector('.reset-btn');
+
+        this.setupEventListeners();
+        this.draw();
+    }
+
+    setupEventListeners() {
+        this.startButton.addEventListener('click', () => this.spin());
+        this.resetButton.addEventListener('click', () => this.reset());
+        this.optionsTextarea.addEventListener('input', () => {
+            this.updateOptions();
+            this.draw();
+        });
+    }
+
+    updateOptions() {
+        const text = this.optionsTextarea.value.trim();
+        this.options = text ? text.split('\n').filter(option => option.trim()) : [];
+    }
+
+    getRandomRotation() {
+        return Math.floor(Math.random() * 360) + (360 * 8); // 確保至少旋轉 8 圈
+    }
+
+    spin() {
+        if (this.isSpinning || this.options.length === 0) return;
+
+        this.isSpinning = true;
+        this.startButton.disabled = true;
+        this.targetRotation = this.currentRotation + this.getRandomRotation();
+
+        const startTime = Date.now();
+
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / this.spinDuration, 1);
+
+            // 使用 easeOutQuart 讓動畫逐漸減速
+            const easeOutQuart = t => 1 - Math.pow(1 - t, 4);
+            const easedProgress = easeOutQuart(progress);
+
+            this.currentRotation = this.currentRotation + (this.targetRotation - this.currentRotation) * easedProgress;
+            this.draw();
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
                 this.isSpinning = false;
-                this.currentRotation = 0;
-                this.targetRotation = 0;
-                this.spinDuration = 5000;
-
-                this.titleInput = container.querySelector('.title-input');
-                this.optionsTextarea = container.querySelector('.options-list');
-                this.startButton = container.querySelector('.start-btn');
-                this.resetButton = container.querySelector('.reset-btn');
-                this.resultDiv = container.querySelector('.result');
-                this.selectedLabel = container.querySelector('.selected-label');
-
-                this.setupEventListeners();
-                this.draw();
-            }
-
-            setupEventListeners() {
-                this.startButton.addEventListener('click', () => this.spin());
-                this.resetButton.addEventListener('click', () => this.reset());
-                this.optionsTextarea.addEventListener('input', () => {
-                    this.updateOptions();
-                    this.draw();
-                });
-            }
-
-            updateOptions() {
-                const text = this.optionsTextarea.value.trim();
-                this.options = text ? text.split('\n').filter(option => option.trim()) : [];
-            }
-
-            getRandomRotation() {
-                return Math.floor(Math.random() * 360) + (360 * 8);
-            }
-
-            spin() {
-                if (this.isSpinning || this.options.length === 0) return;
-
-                this.isSpinning = true;
-                this.startButton.disabled = true;
-                this.targetRotation = this.currentRotation + this.getRandomRotation();
-                this.selectedLabel.textContent = '';
-
-                const startTime = Date.now();
-
-                const animate = () => {
-                    const elapsed = Date.now() - startTime;
-                    const progress = Math.min(elapsed / this.spinDuration, 1);
-
-                    const easeOutQuart = t => 1 - Math.pow(1 - t, 4);
-                    const easedProgress = easeOutQuart(progress);
-
-                    this.currentRotation = this.currentRotation + (this.targetRotation - this.currentRotation) * easedProgress;
-                    this.draw();
-
-                    if (progress < 1) {
-                        requestAnimationFrame(animate);
-                    } else {
-                        this.isSpinning = false;
-                        this.startButton.disabled = false;
-                        this.showResult();
-                    }
-                };
-
-                animate();
-            }
-
-            reset() {
-                this.currentRotation = 0;
-                this.targetRotation = 0;
-                this.isSpinning = false;
-                this.options = [];
-
                 this.startButton.disabled = false;
-                this.titleInput.value = '';
-                this.optionsTextarea.value = '';
-                this.resultDiv.textContent = '';
-                this.selectedLabel.textContent = '';
-
-                this.draw();
             }
+        };
 
-            showResult() {
-                const degrees = (this.currentRotation % 360 + 360) % 360;
-                const sectionSize = 360 / this.options.length;
-                const index = Math.floor((360 - degrees + sectionSize / 2) % 360 / sectionSize);
-                const result = this.options[index];
+        animate();
+    }
 
-                this.resultDiv.textContent = `結果：${result}`;
-                this.selectedLabel.textContent = result;
-            }
+    reset() {
+        this.currentRotation = 0;
+        this.targetRotation = 0;
+        this.isSpinning = false;
+        this.options = [];
 
-            draw() {
-                const { width, height } = this.canvas;
-                this.ctx.clearRect(0, 0, width, height);
+        this.startButton.disabled = false;
+        this.titleInput.value = '';
+        this.optionsTextarea.value = '';
 
-                const centerX = width / 2;
-                const centerY = height / 2;
-                const radius = Math.min(width, height) / 2 - 20;
+        this.draw();
+    }
 
-                if (this.options.length > 0) {
-                    const sectionSize = 360 / this.options.length;
+    draw() {
+        const { width, height } = this.canvas;
+        this.ctx.clearRect(0, 0, width, height);
 
-                    for (let i = 0; i < this.options.length; i++) {
-                        const startAngle = (i * sectionSize - 90 + this.currentRotation) * Math.PI / 180;
-                        const endAngle = ((i + 1) * sectionSize - 90 + this.currentRotation) * Math.PI / 180;
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const radius = Math.min(width, height) / 2 - 20;
 
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(centerX, centerY);
-                        this.ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-                        this.ctx.closePath();
+        if (this.options.length > 0) {
+            const sectionSize = 360 / this.options.length;
 
-                        this.ctx.fillStyle = `hsl(${(i * 360 / this.options.length)}, 70%, 70%)`;
-                        this.ctx.fill();
-                        this.ctx.stroke();
-
-                        this.ctx.save();
-                        this.ctx.translate(centerX, centerY);
-                        this.ctx.rotate((startAngle + endAngle) / 2);
-                        this.ctx.textAlign = 'right';
-                        this.ctx.fillStyle = '#000';
-                        this.ctx.font = '14px Arial';
-                        this.ctx.fillText(this.options[i], radius - 20, 5);
-                        this.ctx.restore();
-                    }
-                } else {
-                    this.ctx.beginPath();
-                    this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-                    this.ctx.fillStyle = '#ddd';
-                    this.ctx.fill();
-                    this.ctx.stroke();
-                }
+            for (let i = 0; i < this.options.length; i++) {
+                const startAngle = (i * sectionSize - 90 + this.currentRotation) * Math.PI / 180;
+                const endAngle = ((i + 1) * sectionSize - 90 + this.currentRotation) * Math.PI / 180;
 
                 this.ctx.beginPath();
-                this.ctx.moveTo(centerX + radius - 10, centerY);
-                this.ctx.lineTo(centerX + radius + 20, centerY - 10);
-                this.ctx.lineTo(centerX + radius + 20, centerY + 10);
+                this.ctx.moveTo(centerX, centerY);
+                this.ctx.arc(centerX, centerY, radius, startAngle, endAngle);
                 this.ctx.closePath();
-                this.ctx.fillStyle = '#f44336';
+
+                this.ctx.fillStyle = `hsl(${(i * 360 / this.options.length)}, 70%, 70%)`;
                 this.ctx.fill();
+                this.ctx.stroke();
+
+                // 繪製選項文字
+                this.ctx.save();
+                this.ctx.translate(centerX, centerY);
+                this.ctx.rotate((startAngle + endAngle) / 2);
+                this.ctx.textAlign = 'right';
+                this.ctx.fillStyle = '#000';
+                this.ctx.font = '14px Arial';
+                this.ctx.fillText(this.options[i], radius - 20, 5);
+                this.ctx.restore();
             }
+        } else {
+            this.ctx.beginPath();
+            this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            this.ctx.fillStyle = '#ddd';
+            this.ctx.fill();
+            this.ctx.stroke();
         }
 
-        document.querySelectorAll('.wheel-container').forEach(container => new WheelOfFortune(container));
+        // 繪製指針
+        this.ctx.beginPath();
+        this.ctx.moveTo(centerX + radius - 10, centerY);
+        this.ctx.lineTo(centerX + radius + 20, centerY - 10);
+        this.ctx.lineTo(centerX + radius + 20, centerY + 10);
+        this.ctx.closePath();
+        this.ctx.fillStyle = '#f44336';
+        this.ctx.fill();
+    }
+}
+
+// 初始化轉盤
+new WheelOfFortune(document.querySelector('#wheel1'));
     </script>
 </body>
 </html>
