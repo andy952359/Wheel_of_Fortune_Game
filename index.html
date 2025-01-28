@@ -221,157 +221,161 @@
 
     <script>
         class WheelOfFortune {
-            constructor(container) {
-                this.container = container;
-                this.canvas = container.querySelector('canvas');
-                this.ctx = this.canvas.getContext('2d');
-                this.options = [];
+    constructor(container) {
+        this.container = container;
+        this.canvas = container.querySelector('canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.options = [];
+        this.isSpinning = false;
+        this.currentRotation = 0;
+        this.targetRotation = 0;
+        this.spinDuration = 5000; // 改為 5 秒
+        
+        this.titleInput = container.querySelector('.title-input');
+        this.optionsTextarea = container.querySelector('.options-list');
+        this.startButton = container.querySelector('.start-btn');
+        this.resetButton = container.querySelector('.reset-btn');
+        this.resultDiv = container.querySelector('.result');
+        this.selectedLabel = container.querySelector('.selected-label');
+
+        this.setupEventListeners();
+        this.draw();
+    }
+
+    setupEventListeners() {
+        this.startButton.addEventListener('click', () => this.spin());
+        this.resetButton.addEventListener('click', () => this.reset());
+        this.optionsTextarea.addEventListener('input', () => {
+            this.updateOptions();
+            this.draw();
+        });
+    }
+
+    updateOptions() {
+        const text = this.optionsTextarea.value.trim();
+        this.options = text ? text.split('\n').filter(option => option.trim()) : [];
+    }
+
+    getRandomRotation() {
+        // 增加最小旋轉圈數，確保至少轉動 8 圈
+        return Math.floor(Math.random() * 360) + (360 * 8);
+    }
+
+    spin() {
+        if (this.isSpinning || this.options.length === 0) return;
+        
+        this.isSpinning = true;
+        this.startButton.disabled = true;
+        this.targetRotation = this.currentRotation + this.getRandomRotation();
+        this.selectedLabel.textContent = '';
+        
+        const startTime = Date.now();
+        
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / this.spinDuration, 1);
+            
+            // 使用 easeOutQuart 效果使結尾更加緩慢
+            const easeOutQuart = t => 1 - Math.pow(1 - t, 4);
+            const easedProgress = easeOutQuart(progress);
+            
+            this.currentRotation = this.currentRotation + (this.targetRotation - this.currentRotation) * easedProgress;
+            this.draw();
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
                 this.isSpinning = false;
-                this.currentRotation = 0;
-                this.targetRotation = 0;
-                this.spinDuration = 5000; // 5 seconds
-                
-                this.titleInput = container.querySelector('.title-input');
-                this.optionsTextarea = container.querySelector('.options-list');
-                this.startButton = container.querySelector('.start-btn');
-                this.resetButton = container.querySelector('.reset-btn');
-                this.resultDiv = container.querySelector('.result');
-                this.selectedLabel = container.querySelector('.selected-label');
-
-                this.setupEventListeners();
-                this.draw();
-            }
-
-            setupEventListeners() {
-                this.startButton.addEventListener('click', () => this.spin());
-                this.resetButton.addEventListener('click', () => this.reset());
-                this.optionsTextarea.addEventListener('input', () => {
-                    this.updateOptions();
-                    this.draw();
-                });
-            }
-
-            updateOptions() {
-                const text = this.optionsTextarea.value.trim();
-                this.options = text ? text.split('\n').filter(option => option.trim()) : [];
-            }
-
-            getRandomRotation() {
-                return Math.floor(Math.random() * 360) + 3600;
-            }
-
-            spin() {
-                if (this.isSpinning || this.options.length === 0) return;
-                
-                this.isSpinning = true;
-                this.startButton.disabled = true;
-                this.targetRotation = this.currentRotation + this.getRandomRotation();
-                this.selectedLabel.textContent = '';
-                
-                const startTime = Date.now();
-                
-                const animate = () => {
-                    const elapsed = Date.now() - startTime;
-                    const progress = Math.min(elapsed / this.spinDuration, 1);
-                    
-                    const easeOut = t => 1 - Math.pow(1 - t, 3);
-                    const easedProgress = easeOut(progress);
-                    
-                    this.currentRotation = this.currentRotation + (this.targetRotation - this.currentRotation) * easedProgress;
-                    this.draw();
-
-                    if (progress < 1) {
-                        requestAnimationFrame(animate);
-                    } else {
-                        this.isSpinning = false;
-                        this.startButton.disabled = false;
-                        this.showResult();
-                    }
-                };
-
-                animate();
-            }
-
-            reset() {
-                this.currentRotation = 0;
-                this.targetRotation = 0;
-                this.isSpinning = false;
-                this.options = [];
-                
                 this.startButton.disabled = false;
-                this.titleInput.value = '';
-                this.optionsTextarea.value = '';
-                this.resultDiv.textContent = '';
-                this.selectedLabel.textContent = '';
-                
-                this.draw();
+                this.showResult();
             }
+        };
 
-            showResult() {
-                const degrees = this.currentRotation % 360;
-                const sectionSize = 360 / this.options.length;
-                const selectedIndex = Math.floor(((360 - degrees) % 360) / sectionSize);
-                const result = this.options[selectedIndex];
-                this.resultDiv.textContent = `結果：${result}`;
-                this.selectedLabel.textContent = result;
-            }
+        animate();
+    }
 
-            draw() {
-                const { width, height } = this.canvas;
-                this.ctx.clearRect(0, 0, width, height);
+    reset() {
+        this.currentRotation = 0;
+        this.targetRotation = 0;
+        this.isSpinning = false;
+        this.options = [];
+        
+        this.startButton.disabled = false;
+        this.titleInput.value = '';
+        this.optionsTextarea.value = '';
+        this.resultDiv.textContent = '';
+        this.selectedLabel.textContent = '';
+        
+        this.draw();
+    }
+
+    showResult() {
+        // 修正結果計算方式，使其與指針位置對應
+        const degrees = (360 - (this.currentRotation % 360)) % 360; // 將角度反轉並標準化
+        const sectionSize = 360 / this.options.length;
+        const selectedIndex = Math.floor(degrees / sectionSize);
+        const result = this.options[selectedIndex];
+        this.resultDiv.textContent = `結果：${result}`;
+        this.selectedLabel.textContent = result;
+    }
+
+    draw() {
+        const { width, height } = this.canvas;
+        this.ctx.clearRect(0, 0, width, height);
+        
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const radius = Math.min(width, height) / 2 - 20;
+
+        if (this.options.length > 0) {
+            const sectionSize = 360 / this.options.length;
+            
+            for (let i = 0; i < this.options.length; i++) {
+                const startAngle = (i * sectionSize - 90 + this.currentRotation) * Math.PI / 180;
+                const endAngle = ((i + 1) * sectionSize - 90 + this.currentRotation) * Math.PI / 180;
                 
-                const centerX = width / 2;
-                const centerY = height / 2;
-                const radius = Math.min(width, height) / 2 - 20;
-
-                if (this.options.length > 0) {
-                    const sectionSize = 360 / this.options.length;
-                    
-                    for (let i = 0; i < this.options.length; i++) {
-                        const startAngle = (i * sectionSize - 90 + this.currentRotation) * Math.PI / 180;
-                        const endAngle = ((i + 1) * sectionSize - 90 + this.currentRotation) * Math.PI / 180;
-                        
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(centerX, centerY);
-                        this.ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-                        this.ctx.closePath();
-                        
-                        this.ctx.fillStyle = `hsl(${(i * 360 / this.options.length)}, 70%, 70%)`;
-                        this.ctx.fill();
-                        this.ctx.stroke();
-
-                        this.ctx.save();
-                        this.ctx.translate(centerX, centerY);
-                        this.ctx.rotate((startAngle + endAngle) / 2);
-                        this.ctx.textAlign = 'right';
-                        this.ctx.fillStyle = '#000';
-                        this.ctx.font = '14px Arial';
-                        this.ctx.fillText(this.options[i], radius - 20, 5);
-                        this.ctx.restore();
-                    }
-                } else {
-                    this.ctx.beginPath();
-                    this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-                    this.ctx.fillStyle = '#ddd';
-                    this.ctx.fill();
-                    this.ctx.stroke();
-                }
-
-                // Draw pointer
                 this.ctx.beginPath();
-                this.ctx.moveTo(centerX + radius - 10, centerY);
-                this.ctx.lineTo(centerX + radius + 20, centerY - 10);
-                this.ctx.lineTo(centerX + radius + 20, centerY + 10);
+                this.ctx.moveTo(centerX, centerY);
+                this.ctx.arc(centerX, centerY, radius, startAngle, endAngle);
                 this.ctx.closePath();
-                this.ctx.fillStyle = '#f44336';
+                
+                this.ctx.fillStyle = `hsl(${(i * 360 / this.options.length)}, 70%, 70%)`;
                 this.ctx.fill();
+                this.ctx.stroke();
+
+                // 繪製選項文字
+                this.ctx.save();
+                this.ctx.translate(centerX, centerY);
+                this.ctx.rotate((startAngle + endAngle) / 2);
+                this.ctx.textAlign = 'right';
+                this.ctx.fillStyle = '#000';
+                this.ctx.font = '14px Arial';
+                this.ctx.fillText(this.options[i], radius - 20, 5);
+                this.ctx.restore();
             }
+        } else {
+            this.ctx.beginPath();
+            this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            this.ctx.fillStyle = '#ddd';
+            this.ctx.fill();
+            this.ctx.stroke();
         }
 
-        // Initialize all wheels
-        document.querySelectorAll('.wheel-container').forEach((container) => {
-            new WheelOfFortune(container);
-        });
+        // 繪製指針
+        this.ctx.beginPath();
+        this.ctx.moveTo(centerX + radius - 10, centerY);
+        this.ctx.lineTo(centerX + radius + 20, centerY - 10);
+        this.ctx.lineTo(centerX + radius + 20, centerY + 10);
+        this.ctx.closePath();
+        this.ctx.fillStyle = '#f44336';
+        this.ctx.fill();
+    }
+}
+
+// 初始化所有轉盤
+document.querySelectorAll('.wheel-container').forEach((container) => {
+    new WheelOfFortune(container);
+});
     </script>
 </body>
 </html>
