@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<!-- Previous HTML head and style sections remain the same -->
+<head>
+    <!-- Previous styles remain the same -->
+</head>
+<body>
+    <!-- Previous HTML structure remains the same -->
+    <script>
+        class WheelOfFortune {
+            constructor(container) {
+                // Previous constructor code remains the same
+                this.container = container;
+                this.canvas = container.querySelector('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.options = [];
+                this.isSpinning = false;
+                this.currentRotation = 0;
+                this.targetRotation = 0;
+                this.spinDuration = 3000; // 3 seconds
+                
+                this.titleInput = container.querySelector('.title-input');
+                this.optionsTextarea = container.querySelector('.options-list');
+                this.startButton = container.querySelector('.start-btn');
+                this.resetButton = container.querySelector('.reset-btn');
+                this.resultDiv = container.querySelector('.result');
+                this.selectedLabel = container.querySelector('.selected-label');
+
+                this.setupEventListeners();
+                this.draw();
+            }
+
+            setupEventListeners() {
+                this.startButton.addEventListener('click', () => this.spin());
+                this.resetButton.addEventListener('click', () => this.reset());
+                this.optionsTextarea.addEventListener('input', () => {
+                    this.updateOptions();
+                    this.draw();
+                });
+            }
+
+            // Previous methods remain the same until reset()
+
+            reset() {
+                // Reset all wheel properties
+                this.currentRotation = 0;
+                this.targetRotation = 0;
+                this.isSpinning = false;
+                this.options = [];
+                
+                // Reset UI elements
+                this.startButton.disabled = false;
+                this.titleInput.value = '';
+                this.optionsTextarea.value = '';
+                this.resultDiv.textContent = '';
+                this.selectedLabel.textContent = '';
+                
+                // Redraw the empty wheel
+                this.draw();
+            }
+
+            // All other methods remain the same
+        }
+
+        // Initialize all wheels
+        document.querySelectorAll('.wheel-container').forEach((container) => {
+            new WheelOfFortune(container);
+        });
+    </script>
+</body>
+</html>
